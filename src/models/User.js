@@ -48,7 +48,7 @@ const UserSchema = new Schema(
 );
 
 //hooks: if there any udate request we can cache it here using hooks
-UserSchema.pre("save", async function (name) {
+UserSchema.pre("save", async function (next) {
   let user = this;
   if (!user.isModified("password")) return next(); //if we haven't change we don't want to do anything
   user.password = await hash(user.password, 10); //if we changed we have to hash that pass here, roundup sorts
@@ -76,7 +76,7 @@ UserSchema.methods.generatePasswordReset = function () {
 };
 
 UserSchema.methods.getUserInfo = function () {
-  return pick(this, ["_id", "username", "email", "name"]); //pull this us, ema, name with id
+  return pick(this, ["_id", "username", "email", "name", "verified"]); //pull this us, ema, name with id
 };
 
 const User = model("users", UserSchema);
