@@ -209,7 +209,7 @@ router.put("api/reset-password", ResetPassword, Validator, async (req, res) => {
 });
 
 /**
- * @description TO get the authenticated user's profile
+ * @description TO render reset password page
  * @api /users/reset-password/:resetPasswordToken
  * @access Restricted via email
  * @type GET
@@ -235,14 +235,54 @@ router.get("/reset-password-now/:resetPasswordToken", async (req, res) => {
 });
 
 /**
- * @description TO get the authenticated user's profile
+ * @description TO reset the password
  * @api /users/api/reset-password-now
  * @access Restricted via email
  * @type POST
  */
 
 router.post("/api/reset-password-now", async (req, res) => {
-  return res.json(req.body);
+  try {
+    let { resetPasswordToken, password } = req.body;
+    let user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpiresIn: { $gt: Date.now() },
+    });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Password reset token is invalid or has expired",
+      });
+    }
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiresIn = undefined;
+    await user.save();
+    //send notification email about password reset successful
+    let html = `
+    <div>
+          <h1>Hello, ${user.username}</h1>
+          <p>your password has been changed..</p>
+          <p>If this password reset request is not done by you then you can contact our team.</p>
+    </div>
+`;
+    await sendMail(
+      user.email,
+      "Reset Password successfully",
+      "Your password is changed",
+      html
+    );
+    return res.status(200).json({
+      success: true,
+      message:
+        "Your password request is complete and it has been successfully changed. Login to your Account",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "something went wrong..",
+    });
+  }
 });
 
 export default router;
